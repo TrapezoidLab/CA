@@ -1,55 +1,59 @@
 #!/usr/bin/env bash
 
 set -e
-DOMAIN="$HOSTNAME"
-DAYS="1825"
-OUTPUT_DIR="$PWD"
+domain="$HOSTNAME"
+days="1825"
+output_dir="$PWD"
 
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    -d|--domain)
-      DOMAIN="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    --days)
-      DAYS="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -t|--tld)
-      TLD="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -o|--output-dir)
-      OUTPUT_DIR="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    *)
-      POSITIONAL_ARGS+=("$1") # save positional arg
-      shift # past argument
-      ;;
-  esac
+    case $1 in
+        -d|--domain)
+            domain="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        --days)
+            days="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        -t|--tld)
+            TLD="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        -o|--output-dir)
+            output_dir="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1") # save positional arg
+            shift # past argument
+            ;;
+    esac
 done
 
-ROOT_KEY="$OUTPUT_DIR/$DOMAIN.key"
-ROOT_CERT="$OUTPUT_DIR/$DOMAIN.cert"
-ROOT_SUBJECT="/CN=$DOMAIN"
-ROOT_EXT="subjectAltName=DNS:$DOMAIN,DNS:*.$DOMAIN"
+root_key="$output_dir/$domain.key"
+root_cert="$output_dir/$domain.cert"
+root_pem="$output_dir/$domain.cert"
+root_subject="/CN=$domain"
+root_ext="subjectAltName=DNS:$domain,DNS:*.$domain"
 
 if [[ -n $TLD ]]; then
-  ROOT_EXT="$ROOT_EXT,DNS:$DOMAIN.$TLD,DNS:*.$DOMAIN.$TLD"
+  root_ext="$root_ext,DNS:$domain.$TLD,DNS:*.$domain.$TLD"
 fi
 
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$output_dir"
 
 echo "Create a root key"
-openssl genrsa -out "$ROOT_KEY" 2048
+openssl genrsa -out "$root_key" 2048
 
 echo "Create a root certificate"
-openssl req -x509 -new -nodes -key "$ROOT_KEY" -sha256 -days "$DAYS" -out "$ROOT_CERT" -subj "$ROOT_SUBJECT" -addext "$ROOT_EXT"
+openssl req -x509 -new -nodes -key "$root_key" -sha256 -days "$days" -out "$root_cert" -subj "$root_subject" -addext "$root_ext"
 
 echo "Validate root "
-openssl x509 -in "$ROOT_CERT" -text -noout
+openssl x509 -in "$root_cert" -text -noout
+
+echo "Creating combined key and certificate for .pem"
+cat "$root_key" "$root_cert" > "$root_pem"
